@@ -3,7 +3,6 @@ use std::hash::Hash;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
-// #[derive(Clone)]
 struct Node<V>
     where V: Clone
 {
@@ -15,14 +14,13 @@ struct Node<V>
 struct TTLCache<K, V>
 {
     store: HashMap<K, V>,
-    marked_for_deletion: Vec<K>,
 }
 
 impl<K, V> TTLCache<K, Node<V>>
     where K: Hash + Clone + Eq, V: Clone
 {
     pub fn new() -> Self {
-        TTLCache { store: HashMap::new(), marked_for_deletion: Vec::new() }
+        TTLCache { store: HashMap::new() }
     }
 
     pub fn set(&mut self, key: K, value: V, ttl: usize) {
