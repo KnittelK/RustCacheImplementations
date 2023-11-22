@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::thread::sleep;
 use std::time::{Duration, Instant};
 
-struct Node<V>
+struct CacheEntry<V>
     where V: Clone
 {
     data: V,
@@ -16,7 +16,7 @@ struct TTLCache<K, V>
     store: HashMap<K, V>,
 }
 
-impl<K, V> TTLCache<K, Node<V>>
+impl<K, V> TTLCache<K, CacheEntry<V>>
     where K: Hash + Clone + Eq, V: Clone
 {
     pub fn new() -> Self {
@@ -29,7 +29,7 @@ impl<K, V> TTLCache<K, Node<V>>
             0 => usize::MAX,
             _ => ttl
         };
-        let node = Node { data: value, ttl, alive: Instant::now() };
+        let node = CacheEntry { data: value, ttl, alive: Instant::now() };
         self.store.insert(key, node);
     }
 

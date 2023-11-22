@@ -1,11 +1,11 @@
 
-struct Node<K, V> {
+struct CacheEntry<K, V> {
     key: K,
     value: V
 }
 
 struct VecLRUCache<K, V>{
-    store: Vec<Node<K, V>>,
+    store: Vec<CacheEntry<K, V>>,
     size: usize
 }
 
@@ -18,7 +18,7 @@ impl<K,V> VecLRUCache<K, V> where K: Clone + Eq , V: Clone{
 
     fn insert(&mut self, key: K, value: V) {
         // O(1) insert
-        let node = Node {key, value};
+        let node = CacheEntry {key, value};
         if self.store.len() == self.size {
             self.store.pop();
         }
@@ -39,7 +39,7 @@ impl<K,V> VecLRUCache<K, V> where K: Clone + Eq , V: Clone{
         if present {
             // update the location of the looked up node to the front of the cache.
             let ret_val = self.store.remove(present_idx).value;
-            self.store.insert(0, Node {key: key.clone(), value: ret_val.clone()});
+            self.store.insert(0, CacheEntry {key: key.clone(), value: ret_val.clone()});
             Some(ret_val)
         } else {
             None

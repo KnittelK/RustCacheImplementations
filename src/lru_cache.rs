@@ -1,33 +1,46 @@
+use std::arch::aarch64::int8x8_t;
 use std::collections::{HashMap};
 use std::hash::Hash;
 
-struct LRUCache<K, T> {
+
+
+pub struct LRUCache<K, T> {
     recently_used_keys: Vec<K>,
     store: HashMap<K, T>,
     size: usize,
+    hits: usize,
+    misses: usize,
 }
 
 
-impl<K, V> LRUCache<K, V> where K: Eq + Hash + Clone{
+impl<K, V> LRUCache<K, V> where K: Eq + Hash + Clone {
     pub fn new(size: usize) -> LRUCache<K, V> {
-        LRUCache { recently_used_keys: Vec::with_capacity(size), store: HashMap::new(), size }
+        LRUCache {
+            recently_used_keys: Vec::with_capacity(size),
+            store: HashMap::new(),
+            size,
+            hits: 0,
+            misses: 0
+        }
     }
 
     pub fn get(&mut self, key: &K) -> Option<&V> {
         // O(N) lookup
         let ret;
-        if self.store.contains_key(key){
+        if self.store.contains_key(key) {
             self.update_recently_accessed_keys(key);
             ret = self.store.get(key);
+            self.hits += 1;
             ret
         } else {
+            self.misses += 1;
             None
         }
     }
 
     pub fn set(&mut self, key: K, value: V) {
         // O(N) insert
-        if self.store.contains_key(&key){
+        if self.store.contains_key(&key) {
             self.update_recently_accessed_keys(&key);
         } else {
             self.insert_at_head(&key);
@@ -37,13 +50,23 @@ impl<K, V> LRUCache<K, V> where K: Eq + Hash + Clone{
 
     pub fn get_mut(&mut self, key: &K) -> Option<&mut V> {
         let ret;
-        if self.store.contains_key(key){
+        if self.store.contains_key(key) {
+            self.hits += 1;
             self.update_recently_accessed_keys(key);
             ret = self.store.get_mut(key);
             ret
         } else {
+            self.misses += 1;
             None
         }
+    }
+
+    fn hit_ratio(&self) -> f32 {
+        self.hits as f32 / (self.hits + self.misses) as f32
+    }
+
+    fn miss_ratio(&self) -> f32 {
+        self.misses as f32 / (self.hits + self.misses) as f32
     }
 
     fn insert_at_head(&mut self, key: &K) {
@@ -95,28 +118,24 @@ fn test_lru_cache_size() {
     assert!(lru_cache.get(&k1).is_none());
 }
 
-//
-// #[test]
-// fn test_mutable_contents() {
-//     let mut cache = LRUCache::new(2);
-//     cache.set("apple", 3);
-//     cache.set("banana", 2);
-//
-//     assert_eq!(*cache.get(&"apple").unwrap(), 3);
-//     assert_eq!(*cache.get(&"banana").unwrap(), 2);
-//     assert!(cache.get(&"pear").is_none());
-//
-//     assert_eq!(cache.set("banana", 4), Some(2));
-//     assert_eq!(cache.set("pear", 5), None);
-//
-//     assert_eq!(*cache.get(&"pear").unwrap(), 5);
-//     assert_eq!(*cache.get(&"banana").unwrap(), 4);
-//     assert!(cache.get(&"apple").is_none());
-//
-//     {
-//         let v = cache.get_mut(&"banana").unwrap();
-//         *v = 6;
-//     }
-//
-//     assert_eq!(*cache.get(&"banana").unwrap(), 6);
-// }
+#[test]
+fn hit_ratio_is_point_five_when_cache_was_hit_and_missed_once() {
+    let mut lru_cache = LRUCache::new(2);
+    let k1 = "K1";
+    let v1 = "V1";
+    lru_cache.set(k1, v1);
+    lru_cache.get(&k1);
+    lru_cache.get(&"Key not present in cache");
+    assert_eq!(lru_cache.hit_ratio(), 0.5);
+}
+
+#[test]
+fn miss_ratio_is_one_and_hit_ratio_is_zero_for_a_full_miss_cache() {
+    let mut lru_cache = LRUCache::new(2);
+    let k1 = "K1";
+    let v1 = "V1";
+    lru_cache.set(k1, v1);
+    lru_cache.get(&"Key not present in cache");
+    assert_eq!(lru_cache.miss_ratio(), 1.);
+    assert_eq!(lru_cache.hit_ratio(), 0.);
+}
