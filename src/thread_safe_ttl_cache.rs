@@ -16,7 +16,7 @@ struct CacheEntry<V>
 struct ThreadSafeTTLCache<K, V>
     where V: Clone
 {
-    store: RwLock<HashMap<K, Mutex<CacheEntry<V>>>>,
+    store: RwLock<HashMap<K, CacheEntry<V>>>,
 }
 
 impl<K, V> ThreadSafeTTLCache<K, V>
@@ -33,12 +33,11 @@ impl<K, V> ThreadSafeTTLCache<K, V>
             let r_store = self.store.read().expect("RWLock has been poisoned.");
             match r_store.get(key) {
                 Some(cache_entry) => {
-                    let entry = cache_entry.lock().unwrap();
-                    tombstone = entry.alive.elapsed().as_secs() > entry.ttl as u64;
+                    tombstone = cache_entry.alive.elapsed().as_secs() > cache_entry.ttl as u64;
                     if tombstone {
                         ret = None;
                     } else {
-                        let v = entry.data.clone();
+                        let v = cache_entry.data.clone();
                         ret = Some(v);
                     }
                 }
@@ -56,7 +55,7 @@ impl<K, V> ThreadSafeTTLCache<K, V>
     pub fn set(&self, key: &K, value: V, ttl: usize) {
         let mut w_store = self.store.write().expect("RWLock has been poisoned.");
 
-        w_store.insert(key.clone(), Mutex::new(CacheEntry { data: value, ttl, alive: Instant::now() }));
+        w_store.insert(key.clone(), CacheEntry { data: value, ttl, alive: Instant::now() });
     }
 
     fn evict_entry(&self, key: &K) {
@@ -80,10 +79,10 @@ fn multithreaded_rw() {
             }
             None => println!("Thread id: {} found no data.", id)
         }
-        thread::sleep(Duration::from_millis(1500));
+        thread::sleep(Duration::from_millis(2500));
         match cache.get(&id) {
             Some(data) => {
-                println!("GOT DATA AFTER SLEEPING FOR 3 SECONDS {}", data);
+                println!("GOT DATA AFTER SLEEPING FOR 1.5 SECONDS {}", data);
             }
             None => println!("Thread id: {} found no data.", id)
         }
@@ -100,6 +99,6 @@ fn multithreaded_rw() {
         t.join().expect("Thread panicked.")
     }
     for (_, entry) in ttl_cache.store.read().unwrap().iter() {
-        println!("{:?}", entry.lock().unwrap().data);
+        println!("{:?}", entry.data);
     }
 }
